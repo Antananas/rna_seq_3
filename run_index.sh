@@ -11,4 +11,4 @@ cd ~/rna_seq_3
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate snakemake
 
-snakemake --cores 8 --sdm conda reference/hisat2/grch38.1.ht2
+snakemake --cores 8 reference/hisat2/grch38.1.ht2 --sdm conda
