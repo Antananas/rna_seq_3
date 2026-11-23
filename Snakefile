@@ -172,3 +172,20 @@ rule kallisto_quant:
         -o results/kallisto/{wildcards.meginys} \
         -t {threads} {input.r1} {input.r2} > {log} 2>&1
         """
+rule paruosti_bed12:
+    input:
+        "reference/gencode.v50.primary_assembly.annotation.gtf.gz"
+    output:
+        "reference/gencode.v50.bed12"
+    conda:
+        "envs/rseqc.yaml"
+    log:
+        "logs/rseqc/bed12.log"
+    shell:
+        """
+        set -euo pipefail
+        mkdir -p logs/rseqc
+        gzip -dc {input} > reference/gencode.v50.gtf
+        gtfToGenePred -genePredExt reference/gencode.v50.gtf reference/gencode.v50.genePred > {log} 2>&1
+        genePredToBed reference/gencode.v50.genePred {output} >> {log} 2>&1
+        """
