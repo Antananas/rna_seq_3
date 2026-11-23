@@ -14,7 +14,9 @@ rule all:
         "results/featurecounts/gene_counts.txt.summary",
         expand("results/kallisto/{meginys}/abundance.tsv", meginys=meginiai),
         expand("results/rseqc/{meginys}_strandedness.txt", meginys=meginiai),
-        expand("results/rseqc/{meginys}_distribution.txt", meginys=meginiai)
+        expand("results/rseqc/{meginys}_distribution.txt", meginys=meginiai),
+        expand("results/rseqc/{meginys}_geneBody.geneBodyCoverage.txt", meginys=meginiai),
+        expand("results/rseqc/{meginys}_inner.inner_distance_freq.txt", meginys=meginiai)
 rule fastqc:
     input:
         "data/raw/{meginys}_{pora}.fastq.gz"
@@ -222,4 +224,38 @@ rule rseqc_pasiskirstymas:
         """
         mkdir -p results/rseqc logs/rseqc
         read_distribution.py -i {input.bam} -r {input.bed} > {output} 2> {log}
+        """
+rule rseqc_gene_coverage:
+    input:
+        bam="results/bam/{meginys}.bam",
+        bed="reference/gencode.v50.bed12"
+    output:
+        "results/rseqc/{meginys}_geneBody.geneBodyCoverage.txt"
+    conda:
+        "envs/rseqc.yaml"
+    log:
+        "logs/rseqc/{meginys}_geneBody.log"
+    shell:
+        """
+        mkdir -p results/rseqc logs/rseqc
+        geneBody_coverage.py -i {input.bam} -r {input.bed} \
+        -o results/rseqc/{wildcards.meginys}_geneBody > {log} 2>&1
+        """
+
+
+rule rseqc_fragmentai:
+    input:
+        bam="results/bam/{meginys}.bam",
+        bed="reference/gencode.v50.bed12"
+    output:
+        "results/rseqc/{meginys}_inner.inner_distance_freq.txt"
+    conda:
+        "envs/rseqc.yaml"
+    log:
+        "logs/rseqc/{meginys}_inner.log"
+    shell:
+        """
+        mkdir -p results/rseqc logs/rseqc
+        inner_distance.py -i {input.bam} -r {input.bed} \
+        -o results/rseqc/{wildcards.meginys}_inner > {log} 2>&1
         """
