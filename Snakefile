@@ -9,8 +9,9 @@ rule all:
         expand("results/fastqc/trimmed/{meginys}_{pora}_fastqc.html",
                meginys=meginiai, pora=[1, 2]),
         expand("results/fastp/{meginys}.html", meginys=meginiai),
-        expand("results/bam/{meginys}.bam.bai", meginys=meginiai)
-
+        expand("results/bam/{meginys}.bam.bai", meginys=meginiai),
+        "results/featurecounts/gene_counts.txt",
+        "results/featurecounts/gene_counts.txt.summary"
 rule fastqc:
     input:
         "data/raw/{meginys}_{pora}.fastq.gz"
@@ -112,4 +113,24 @@ rule hisat2_alignment:
         -1 {input.r1} -2 {input.r2} 2> {log} |
         samtools sort -@ 2 -m 1G -o {output.bam} -
         samtools index -@ 2 {output.bam}
+        """
+rule featurecounts:
+    input:
+        bam=expand("results/bam/{meginys}.bam", meginys=meginiai),
+        gtf="reference/gencode.v50.primary_assembly.annotation.gtf.gz"
+    output:
+        counts="results/featurecounts/gene_counts.txt",
+        summary="results/featurecounts/gene_counts.txt.summary"
+    threads: 8
+    conda:
+        "envs/featurecounts.yaml"
+    log:
+        "logs/featurecounts.log"
+    shell:
+        """
+        mkdir -p results/featurecounts
+        featureCounts -T {threads} -p --countReadPairs -s 0 \
+        -t exon -g gene_id \
+        -a {input.gtf} \
+        -o {output.counts} {input.bam} > {log} 2>&1
         """
