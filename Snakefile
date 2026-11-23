@@ -66,3 +66,27 @@ rule fastqc_trimmed:
         "mkdir -p results/fastqc/trimmed logs/fastqc; "
         "fastqc --threads {threads} --outdir results/fastqc/trimmed "
         "{input} > {log} 2>&1"
+rule paruosti_genoma:
+    input:
+        "reference/GRCh38.primary_assembly.genome.fa.gz"
+    output:
+        "reference/GRCh38.primary_assembly.genome.fa"
+    shell:
+        "gzip -dc {input} > {output}"
+
+
+rule hisat2_indeksas:
+    input:
+        "reference/GRCh38.primary_assembly.genome.fa"
+    output:
+        expand("reference/hisat2/grch38.{nr}.ht2", nr=range(1, 9))
+    threads: 8
+    conda:
+        "envs/hisat2.yaml"
+    log:
+        "logs/hisat2_index.log"
+    shell:
+        """
+        mkdir -p reference/hisat2 logs
+        hisat2-build -p {threads} {input} reference/hisat2/grch38 > {log} 2>&1
+        """
