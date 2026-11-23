@@ -228,7 +228,7 @@ rule rseqc_pasiskirstymas:
 rule rseqc_gene_coverage:
     input:
         bam="results/bam/{meginys}.bam",
-        bed="reference/gencode.v50.bed12"
+        bed="reference/gencode.v50_1000.bed12"
     output:
         "results/rseqc/{meginys}_geneBody.geneBodyCoverage.txt"
     conda:
@@ -259,3 +259,27 @@ rule rseqc_fragmentai:
         inner_distance.py -i {input.bam} -r {input.bed} \
         -o results/rseqc/{wildcards.meginys}_inner > {log} 2>&1
         """
+rule bed12_mazas:
+    input:
+        "reference/gencode.v50.bed12"
+    output:
+        "reference/gencode.v50_1000.bed12"
+    run:
+        import random
+
+        chromosomos = ["chr" + str(i) for i in range(1, 23)] + ["chrX", "chrY"]
+        eilutes = []
+
+        with open(input[0]) as failas:
+            for eilute in failas:
+                dalys = eilute.strip().split("\t")
+                if len(dalys) == 12 and dalys[0] in chromosomos:
+                    if int(dalys[9]) >= 2:
+                        ilgis = sum(int(x) for x in dalys[10].strip(",").split(","))
+                        if ilgis >= 1000:
+                            eilutes.append(eilute)
+
+        atrinktos = random.Random(42).sample(eilutes, 1000)
+
+        with open(output[0], "w") as failas:
+            failas.writelines(atrinktos)
