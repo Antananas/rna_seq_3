@@ -12,7 +12,9 @@ rule all:
         expand("results/bam/{meginys}.bam.bai", meginys=meginiai),
         "results/featurecounts/gene_counts.txt",
         "results/featurecounts/gene_counts.txt.summary",
-        expand("results/kallisto/{meginys}/abundance.tsv", meginys=meginiai)
+        expand("results/kallisto/{meginys}/abundance.tsv", meginys=meginiai),
+        expand("results/rseqc/{meginys}_strandedness.txt", meginys=meginiai),
+        expand("results/rseqc/{meginys}_distribution.txt", meginys=meginiai)
 rule fastqc:
     input:
         "data/raw/{meginys}_{pora}.fastq.gz"
@@ -188,4 +190,36 @@ rule paruosti_bed12:
         gzip -dc {input} > reference/gencode.v50.gtf
         gtfToGenePred -genePredExt reference/gencode.v50.gtf reference/gencode.v50.genePred > {log} 2>&1
         genePredToBed reference/gencode.v50.genePred {output} >> {log} 2>&1
+        """
+rule rseqc_kryptingumas:
+    input:
+        bam="results/bam/{meginys}.bam",
+        bed="reference/gencode.v50.bed12"
+    output:
+        "results/rseqc/{meginys}_strandedness.txt"
+    conda:
+        "envs/rseqc.yaml"
+    log:
+        "logs/rseqc/{meginys}_strandedness.log"
+    shell:
+        """
+        mkdir -p results/rseqc logs/rseqc
+        infer_experiment.py -i {input.bam} -r {input.bed} > {output} 2> {log}
+        """
+
+
+rule rseqc_pasiskirstymas:
+    input:
+        bam="results/bam/{meginys}.bam",
+        bed="reference/gencode.v50.bed12"
+    output:
+        "results/rseqc/{meginys}_distribution.txt"
+    conda:
+        "envs/rseqc.yaml"
+    log:
+        "logs/rseqc/{meginys}_distribution.log"
+    shell:
+        """
+        mkdir -p results/rseqc logs/rseqc
+        read_distribution.py -i {input.bam} -r {input.bed} > {output} 2> {log}
         """
