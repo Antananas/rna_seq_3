@@ -16,7 +16,11 @@ rule all:
         expand("results/rseqc/{meginys}_strandedness.txt", meginys=meginiai),
         expand("results/rseqc/{meginys}_distribution.txt", meginys=meginiai),
         expand("results/rseqc/{meginys}_geneBody.geneBodyCoverage.txt", meginys=meginiai),
-        expand("results/rseqc/{meginys}_inner.inner_distance_freq.txt", meginys=meginiai)
+        expand("results/rseqc/{meginys}_inner.inner_distance_freq.txt", meginys=meginiai),
+        "results/deeptools/correlation.pdf",
+        "results/deeptools/correlation.tsv",
+        "results/deeptools/pca.pdf",
+        "results/deeptools/pca.tsv"
 rule fastqc:
     input:
         "data/raw/{meginys}_{pora}.fastq.gz"
@@ -283,3 +287,62 @@ rule bed12_mazas:
 
         with open(output[0], "w") as failas:
             failas.writelines(atrinktos)
+rule deeptools_summary:
+    input:
+        bam=expand("results/bam/{meginys}.bam", meginys=meginiai),
+        bai=expand("results/bam/{meginys}.bam.bai", meginys=meginiai)
+    output:
+        "results/deeptools/counts.npz"
+    threads: 4
+    conda:
+        "envs/deeptools.yaml"
+    log:
+        "logs/deeptools/summary.log"
+    shell:
+        """
+        mkdir -p results/deeptools logs/deeptools
+        multiBamSummary bins -b {input.bam} \
+        --smartLabels --binSize 10000 \
+        -p {threads} -o {output} > {log} 2>&1
+        """
+
+
+rule deeptools_koreliacija:
+    input:
+        "results/deeptools/counts.npz"
+    output:
+        pdf="results/deeptools/correlation.pdf",
+        txt="results/deeptools/correlation.tsv"
+    conda:
+        "envs/deeptools.yaml"
+    log:
+        "logs/deeptools/correlation.log"
+    shell:
+        """
+        plotCorrelation -in {input} \
+        --corMethod pearson \
+        --whatToPlot heatmap \
+        --skipZeros \
+        --plotNumbers \
+        --plotFile {output.pdf} \
+        --outFileCorMatrix {output.txt} > {log} 2>&1
+        """
+
+
+rule deeptools_pca:
+    input:
+        "results/deeptools/counts.npz"
+    output:
+        pdf="results/deeptools/pca.pdf",
+        txt="results/deeptools/pca.tsv"
+    conda:
+        "envs/deeptools.yaml"
+    log:
+        "logs/deeptools/pca.log"
+    shell:
+        """
+        plotPCA -in {input} \
+        --plotFile {output.pdf} \
+        --outFileNameData {output.txt} \
+        --addLabels > {log} 2>&1
+        """
