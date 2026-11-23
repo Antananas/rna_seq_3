@@ -20,7 +20,8 @@ rule all:
         "results/deeptools/correlation.pdf",
         "results/deeptools/correlation.tsv",
         "results/deeptools/pca.pdf",
-        "results/deeptools/pca.tsv"
+        "results/deeptools/pca.tsv",
+        "results/multiqc/multiqc_report.html"
 rule fastqc:
     input:
         "data/raw/{meginys}_{pora}.fastq.gz"
@@ -345,4 +346,26 @@ rule deeptools_pca:
         --plotFile {output.pdf} \
         --outFileNameData {output.txt} \
         --addLabels > {log} 2>&1
+        """
+rule multiqc:
+    input:
+        raw=expand("results/fastqc/raw/{meginys}_{pora}_fastqc.zip", meginys=meginiai, pora=[1, 2]),
+        trimmed=expand("results/fastqc/trimmed/{meginys}_{pora}_fastqc.zip", meginys=meginiai, pora=[1, 2]),
+        fastp=expand("results/fastp/{meginys}.json", meginys=meginiai),
+        counts="results/featurecounts/gene_counts.txt.summary",
+        kallisto=expand("results/kallisto/{meginys}/run_info.json", meginys=meginiai),
+        rseqc=expand("results/rseqc/{meginys}_distribution.txt", meginys=meginiai),
+        pca="results/deeptools/pca.pdf"
+    output:
+        "results/multiqc/multiqc_report.html"
+    conda:
+        "envs/qc.yaml"
+    log:
+        "logs/multiqc.log"
+    shell:
+        """
+        mkdir -p results/multiqc
+        multiqc results/fastqc results/fastp logs/hisat2 \
+        results/featurecounts results/kallisto results/rseqc \
+        -d -dd 1 -o results/multiqc -f > {log} 2>&1
         """
