@@ -8,7 +8,8 @@ rule all:
                meginys=meginiai, pora=[1, 2]),
         expand("results/fastqc/trimmed/{meginys}_{pora}_fastqc.html",
                meginys=meginiai, pora=[1, 2]),
-        expand("results/fastp/{meginys}.html", meginys=meginiai)
+        expand("results/fastp/{meginys}.html", meginys=meginiai),
+        expand("results/bam/{meginys}.bam.bai", meginys=meginiai)
 
 rule fastqc:
     input:
@@ -89,4 +90,26 @@ rule hisat2_indeksas:
         """
         mkdir -p reference/hisat2 logs
         hisat2-build -p {threads} {input} reference/hisat2/grch38 > {log} 2>&1
+        """
+rule hisat2_alignment:
+    input:
+        r1="data/trimmed/{meginys}_1.fastq.gz",
+        r2="data/trimmed/{meginys}_2.fastq.gz",
+        indeksas=expand("reference/hisat2/grch38.{nr}.ht2", nr=range(1, 9))
+    output:
+        bam="results/bam/{meginys}.bam",
+        bai="results/bam/{meginys}.bam.bai"
+    threads: 8
+    conda:
+        "envs/alignment.yaml"
+    log:
+        "logs/hisat2/{meginys}.log"
+    shell:
+        """
+        mkdir -p results/bam logs/hisat2
+        set -euo pipefail
+        hisat2 -p 6 -x reference/hisat2/grch38 \
+        -1 {input.r1} -2 {input.r2} 2> {log} |
+        samtools sort -@ 2 -m 1G -o {output.bam} -
+        samtools index -@ 2 {output.bam}
         """
