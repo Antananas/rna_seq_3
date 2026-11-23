@@ -11,7 +11,8 @@ rule all:
         expand("results/fastp/{meginys}.html", meginys=meginiai),
         expand("results/bam/{meginys}.bam.bai", meginys=meginiai),
         "results/featurecounts/gene_counts.txt",
-        "results/featurecounts/gene_counts.txt.summary"
+        "results/featurecounts/gene_counts.txt.summary",
+        expand("results/kallisto/{meginys}/abundance.tsv", meginys=meginiai)
 rule fastqc:
     input:
         "data/raw/{meginys}_{pora}.fastq.gz"
@@ -133,4 +134,41 @@ rule featurecounts:
         -t exon -g gene_id \
         -a {input.gtf} \
         -o {output.counts} {input.bam} > {log} 2>&1
+        """
+rule kallisto_indeksas:
+    input:
+        "reference/gencode.v50.transcripts.fa.gz"
+    output:
+        "reference/kallisto/transcripts.idx"
+    threads: 4
+    conda:
+        "envs/kallisto.yaml"
+    log:
+        "logs/kallisto/index.log"
+    shell:
+        """
+        mkdir -p reference/kallisto logs/kallisto
+        kallisto index -i {output} -t {threads} {input} > {log} 2>&1
+        """
+
+
+rule kallisto_quant:
+    input:
+        indeksas="reference/kallisto/transcripts.idx",
+        r1="data/trimmed/{meginys}_1.fastq.gz",
+        r2="data/trimmed/{meginys}_2.fastq.gz"
+    output:
+        tsv="results/kallisto/{meginys}/abundance.tsv",
+        info="results/kallisto/{meginys}/run_info.json"
+    threads: 4
+    conda:
+        "envs/kallisto.yaml"
+    log:
+        "logs/kallisto/{meginys}.log"
+    shell:
+        """
+        mkdir -p logs/kallisto
+        kallisto quant -i {input.indeksas} \
+        -o results/kallisto/{wildcards.meginys} \
+        -t {threads} {input.r1} {input.r2} > {log} 2>&1
         """
